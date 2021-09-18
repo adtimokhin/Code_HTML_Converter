@@ -41,11 +41,11 @@ public class CodeHTMLConverter {
      * Loads properties into the {@link CodeHTMLConverter} object for later use in code.
      *
      * @throws IOException if there was an error with getting properties from
-     *                     <a href= "java_conversion.properties"> file </a>.
+     *                     <a href= "conversion_constants.properties"> file </a>.
      */
     public CodeHTMLConverter() throws IOException {
         Properties properties = new Properties();
-        properties.load(new FileInputStream("java_conversion.properties"));
+        properties.load(new FileInputStream("conversion_constants.properties"));
 
         // setting properties
         JAVA = properties.getProperty("JAVA");

@@ -11,7 +11,6 @@ public class HTMLTags {
     /**
      * Constants used to identify all possible HTML tags.
      **/
-
     private static final String DIV_CODE_BLOCK_START = "<div class=\"code-block\" style=\"overflow-y:auto;\">";
     private static final String DIV_CODE_CONTAINER_START = "<div class=\"code-container\">";
 
