@@ -53,6 +53,11 @@ public class CodeHTMLConverter {
         StringBuilder multiLineCommentStringBuilder = null;
         boolean devComment = false;
         while (!CODE_BLOCK_END.equals(nextLine)) {
+
+            if(nextLine.equals("")){
+                generalStringBuilder.append(BR_TAG);
+            }
+
             StringBuilder localStringBuilder = new StringBuilder();
             char[] chars = nextLine.toCharArray();
 
@@ -68,11 +73,11 @@ public class CodeHTMLConverter {
             }
 
 
+
             // figuring out all of the key-words and stuff:
 
             // Step 1 - remove spaces calculated before
             nextLine = nextLine.substring(i);
-
             // Multi-line comments
             // dev-comments
             if ((nextLine.startsWith("/**") || nextLine.contains("/**")) && multiLineCommentStringBuilder == null) {
@@ -136,7 +141,7 @@ public class CodeHTMLConverter {
                 //Step 2 - find keywords
                 // () и . - знаки, которые показывают, что в строке нужно более детальное рассмотрение.
                 if (!nextLine.contains("().")) {
-                    localStringBuilder = convertOneLineWithNoSpecialSymbols(nextLine, localStringBuilder);
+                    localStringBuilder = convertLine(nextLine, localStringBuilder);
                 }
             }
 
@@ -156,9 +161,13 @@ public class CodeHTMLConverter {
 
     }
 
+    // Depreciated :)
     private static StringBuilder convertOneLineWithNoSpecialSymbols(String nextLine, StringBuilder localStringBuilder) throws Exception {
         // normal line with no brackets or stops.
         String[] words = nextLine.split(" ");// split into words
+        if (words.length == 0) {//i.e. this is just an empty line
+            return new StringBuilder(BR_TAG);
+        }
         StringBuilder StringInCode = null;
         boolean isInString = false;
         int wordDifference = 0;
@@ -169,7 +178,7 @@ public class CodeHTMLConverter {
             }
             String word = words[l];
             boolean isEnd = false;
-            if (j == words.length - 1 && word.endsWith(";")) {
+            if (word.endsWith(";")) {
                 word = word.replace(";", "");
                 isEnd = true;
             }
@@ -200,19 +209,18 @@ public class CodeHTMLConverter {
                     }
                 }
                 localStringBuilder.append(word.split("\\(")[0]).append("(");
-                String stringInBrackets = nextLine.substring(posStart+1, posEnd + 1);
+                String stringInBrackets = nextLine.substring(posStart + 1, posEnd + 1);
                 localStringBuilder.append(convertOneLineWithNoSpecialSymbols(stringInBrackets, new StringBuilder()).toString());
 
                 // now we need to start looking at the words that are left after the brackets
                 String wordsAfterBrackets[] = (nextLine.substring(posEnd)).split(" ");
 
-                if(wordsAfterBrackets.length == 1){
+                if (wordsAfterBrackets.length == 1) {
                     localStringBuilder.append(convertOneLineWithNoSpecialSymbols(wordsAfterBrackets[0], localStringBuilder));
                 }
-                    wordDifference = words.length - wordsAfterBrackets.length;
+                wordDifference = words.length - wordsAfterBrackets.length;
 
-            }
-            else if (word.startsWith("@")) {//i.e. it is a annotation
+            } else if (word.startsWith("@")) {//i.e. it is a annotation
                 localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_ANNOTATION));
             } else if (JavaKeyWords.isKeyWord(word)) {// i.e. it is a key word
                 localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_KEY_WORD));
@@ -261,6 +269,84 @@ public class CodeHTMLConverter {
 
         }
 
+        return localStringBuilder;
+    }
+
+
+    private static StringBuilder convertLine(String line, StringBuilder localStringBuilder) throws Exception {
+        // right now we make the following assumptions:
+        // a single line does not use any words that are grouped either by brackets or by fullstops.
+
+        // Step 1: break the line into words
+        String[] words = line.split(" ");
+        if (words.length == 0) {
+            return localStringBuilder.append(BR_TAG);
+        }
+
+        // Step 2: Go through every word and put everything into appropriate tags.
+        boolean endsWithSemiColumn = false;
+        boolean containsLineComment = false;
+        boolean isString = false;
+        StringBuilder lineCommentBuilder = new StringBuilder();
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < words.length; i++) {
+            // We need to test every word
+            String word = words[i];
+
+            if (containsLineComment) { // if at some point line had // the rest of the line is considered to be a comment
+                lineCommentBuilder.append(word);
+                lineCommentBuilder.append(" ");
+                continue;
+            }
+
+            if(isString){ // if we have found " in the line, we assume that there is a String. We will go through words until we find a pairing "
+                stringBuilder.append(word);
+                stringBuilder.append(" ");
+                if(word.endsWith("\"") && !word.endsWith("\\\"")){
+                    isString = false;
+                    localStringBuilder.append(HTMLTags.getCodeInTag(stringBuilder.toString(), Tags.SPAN_STRING));
+                }
+            }
+
+            if (word.endsWith(";")) { // if word ends with semi column we will remove it and treat them separately
+                word = word.replace(";", "");
+                endsWithSemiColumn = true;
+            }
+
+            // check what the word is equal to
+            if (word.startsWith("@")) {// it is an annotation
+                localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_ANNOTATION));
+            } else if (JavaKeyWords.isKeyWord(word)) {// it is a key word
+                localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_KEY_WORD));
+                localStringBuilder.append(" ");
+            } else if (word.startsWith("//")) { // it is a single line comment
+                containsLineComment = true;
+                lineCommentBuilder.append(word);
+                lineCommentBuilder.append(" ");
+            }else if(word.startsWith("\"")){// it is a String
+                if(word.endsWith("\"") && !word.endsWith("\\\"")){
+                    localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_STRING));
+                }else {
+                    isString = true;
+                    stringBuilder.append(word);
+                }
+            }else { // it is a common words
+                localStringBuilder.append(word);
+                if(!endsWithSemiColumn) {
+                    localStringBuilder.append(" ");
+                }
+            }
+
+            // at the end, if we need to add semi column we need to add it:
+            if (endsWithSemiColumn) {
+                localStringBuilder.append(HTMLTags.getCodeInTag("; ", Tags.SPAN_KEY_WORD));
+                endsWithSemiColumn = false;
+            }
+        }
+        // if there was a comment at the end of the line, we need to add it.
+        if (containsLineComment) {
+            localStringBuilder.append(HTMLTags.getCodeInTag(lineCommentBuilder.toString(), Tags.SPAN_COMMENT));
+        }
         return localStringBuilder;
     }
 }
