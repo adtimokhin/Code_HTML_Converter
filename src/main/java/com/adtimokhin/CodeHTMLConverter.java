@@ -54,7 +54,7 @@ public class CodeHTMLConverter {
         boolean devComment = false;
         while (!CODE_BLOCK_END.equals(nextLine)) {
 
-            if(nextLine.equals("")){
+            if (nextLine.equals("")) {
                 generalStringBuilder.append(BR_TAG);
             }
 
@@ -71,7 +71,6 @@ public class CodeHTMLConverter {
                     break;
                 }
             }
-
 
 
             // figuring out all of the key-words and stuff:
@@ -141,7 +140,7 @@ public class CodeHTMLConverter {
                 //Step 2 - find keywords
                 // () и . - знаки, которые показывают, что в строке нужно более детальное рассмотрение.
                 if (!nextLine.contains("().")) {
-                    localStringBuilder = convertLine(nextLine, localStringBuilder);
+                    localStringBuilder = convertLine(nextLine, localStringBuilder, " ");
                 }
             }
 
@@ -273,20 +272,27 @@ public class CodeHTMLConverter {
     }
 
 
-    private static StringBuilder convertLine(String line, StringBuilder localStringBuilder) throws Exception {
+
+    // If you put a String into a line that is split by .'s, then make sure that the String is all in one word.
+    private static StringBuilder convertLine(String line, StringBuilder localStringBuilder, String separator) throws Exception {
         // right now we make the following assumptions:
         // a single line does not use any words that are grouped either by brackets or by fullstops.
 
         // Step 1: break the line into words
-        String[] words = line.split(" ");
+        String[] words = line.split(separator);
         if (words.length == 0) {
             return localStringBuilder.append(BR_TAG);
+        }
+
+        if (separator.equals("\\.")) {
+            separator = ".";
         }
 
         // Step 2: Go through every word and put everything into appropriate tags.
         boolean endsWithSemiColumn = false;
         boolean containsLineComment = false;
         boolean isString = false;
+        boolean isWordThatIsSeparatedByDots = false;
         StringBuilder lineCommentBuilder = new StringBuilder();
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < words.length; i++) {
@@ -295,17 +301,8 @@ public class CodeHTMLConverter {
 
             if (containsLineComment) { // if at some point line had // the rest of the line is considered to be a comment
                 lineCommentBuilder.append(word);
-                lineCommentBuilder.append(" ");
+                lineCommentBuilder.append(separator);
                 continue;
-            }
-
-            if(isString){ // if we have found " in the line, we assume that there is a String. We will go through words until we find a pairing "
-                stringBuilder.append(word);
-                stringBuilder.append(" ");
-                if(word.endsWith("\"") && !word.endsWith("\\\"")){
-                    isString = false;
-                    localStringBuilder.append(HTMLTags.getCodeInTag(stringBuilder.toString(), Tags.SPAN_STRING));
-                }
             }
 
             if (word.endsWith(";")) { // if word ends with semi column we will remove it and treat them separately
@@ -313,30 +310,67 @@ public class CodeHTMLConverter {
                 endsWithSemiColumn = true;
             }
 
-            // check what the word is equal to
-            if (word.startsWith("@")) {// it is an annotation
-                localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_ANNOTATION));
-            } else if (JavaKeyWords.isKeyWord(word)) {// it is a key word
-                localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_KEY_WORD));
-                localStringBuilder.append(" ");
-            } else if (word.startsWith("//")) { // it is a single line comment
-                containsLineComment = true;
-                lineCommentBuilder.append(word);
-                lineCommentBuilder.append(" ");
-            }else if(word.startsWith("\"")){// it is a String
-                if(word.endsWith("\"") && !word.endsWith("\\\"")){
-                    localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_STRING));
-                }else {
-                    isString = true;
-                    stringBuilder.append(word);
+            if (isString) { // if we have found " in the line, we assume that there is a String. We will go through words until we find a pairing "
+                stringBuilder.append(word);
+
+                if (word.endsWith("\"") && !word.endsWith("\\\"")) {
+                    isString = false;
+                    localStringBuilder.append(HTMLTags.getCodeInTag(stringBuilder.toString(), Tags.SPAN_STRING));
+                    if(!endsWithSemiColumn){
+                        stringBuilder.append(" ");
+                    }else {
+                        localStringBuilder.append(HTMLTags.getCodeInTag("; ", Tags.SPAN_KEY_WORD));
+                        endsWithSemiColumn = false;
+                    }
+                } else {
+                    stringBuilder.append(" ");
+
                 }
-            }else { // it is a common words
-                localStringBuilder.append(word);
-                if(!endsWithSemiColumn) {
-                    localStringBuilder.append(" ");
-                }
+                continue;
             }
 
+
+
+            if (word.contains(".") && !word.contains(". ")) {
+                // if word contains '.' then it is made out of multiple words, and hence every
+                // single one of them shall be treated separately
+                localStringBuilder.append(convertLine(word, new StringBuilder(), "\\."));
+                isWordThatIsSeparatedByDots = true;
+
+            }
+
+
+            if (!isWordThatIsSeparatedByDots) {
+                // check what the word is equal to
+                if (word.startsWith("@")) { // it is an annotation
+                    localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_ANNOTATION));
+                } else if (JavaKeyWords.isKeyWord(word)) {// it is a key word
+                    localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_KEY_WORD));
+                    localStringBuilder.append(separator);
+                } else if (word.startsWith("//")) { // it is a single line comment
+                    containsLineComment = true;
+                    lineCommentBuilder.append(word);
+                    lineCommentBuilder.append(" ");
+                } else if (word.startsWith("\"")) { // it is a String
+                    if (word.endsWith("\"") && !word.endsWith("\\\"")) {
+                        localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_STRING));
+                        if (!endsWithSemiColumn) {
+                            localStringBuilder.append(separator);
+                        }
+                    } else {
+                        isString = true;
+                        stringBuilder.append(word);
+                        stringBuilder.append(" ");
+                    }
+                } else { // it is a common words
+                    localStringBuilder.append(word);
+                    if (!endsWithSemiColumn) {
+                        localStringBuilder.append(separator);
+                    }
+                }
+            } else {
+                isWordThatIsSeparatedByDots = false;
+            }
             // at the end, if we need to add semi column we need to add it:
             if (endsWithSemiColumn) {
                 localStringBuilder.append(HTMLTags.getCodeInTag("; ", Tags.SPAN_KEY_WORD));
@@ -346,6 +380,10 @@ public class CodeHTMLConverter {
         // if there was a comment at the end of the line, we need to add it.
         if (containsLineComment) {
             localStringBuilder.append(HTMLTags.getCodeInTag(lineCommentBuilder.toString(), Tags.SPAN_COMMENT));
+        }
+
+        if (separator.equals(".")) {
+            localStringBuilder.deleteCharAt(localStringBuilder.length() - 1); // we do not want our line that is separated by . to end with a dot
         }
         return localStringBuilder;
     }
