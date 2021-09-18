@@ -3,32 +3,73 @@ package com.adtimokhin;
 import com.adtimokhin.htmlProperties.HTMLTags;
 import com.adtimokhin.htmlProperties.Tags;
 import com.adtimokhin.javaProperties.JavaKeyWords;
+import com.sun.istack.internal.NotNull;
 
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.charset.MalformedInputException;
-import java.util.Stack;
+import java.util.Properties;
 
+import static com.adtimokhin.htmlProperties.HTMLSpecialSymbols.GREATER_THAN_SIGN;
+import static com.adtimokhin.htmlProperties.HTMLSpecialSymbols.LESS_THAN_SIGN;
+import static com.adtimokhin.htmlProperties.HTMLSpecialSymbols.SPACE_SIGN;
 import static com.adtimokhin.htmlProperties.HTMLTags.BR_TAG;
 
 /**
- * This is a class that reads text from a file and then converts it to html with all proper tags,
- * so that I don't need to do that
+ * This is a class that reads text from a file and then converts it to HTML with all proper tags,
+ * so that I don't need to do that.
  */
 public class CodeHTMLConverter {
 
     private static final FileReader fileReader = new FileReader();
 
-    private static final String JAVA = "-- JAVA --";
-    private static final String BREAKPOINT = "--";
-    private static final String CODE_BLOCK_START = "BLOCKQUE.START";
-    private static final String CODE_BLOCK_END = "BLOCKQUE.END";
+
+    /**
+     * Constants used to identify what special symbols are used to identify special actions.
+     **/
+    private final String JAVA; // MARKS CODE AS JAVA CODE
+
+    private final String BREAKPOINT; // MARKS THE END OF CODE RUNNING
+
+    private final String CODE_BLOCK_START; // MARKS THE START OF CODE BLOCK.
+                                          // WHERE THE ACTUAL CODE THAT WILL BE GROUPED TOGETHER STARTS
+
+    private final String CODE_BLOCK_END; // MARKS THE END OF CODE BLOCK.
+                                        // WHERE THE ACTUAL CODE THAT WILL BE GROUPED TOGETHER ENDS
 
 
-    public static String convert(String textFile) throws Exception {
+    /**
+     * Loads properties into the {@link CodeHTMLConverter} object for later use in code.
+     *
+     * @throws IOException if there was an error with getting properties from
+     *                     <a href= "java_conversion.properties"> file </a>.
+     */
+    public CodeHTMLConverter() throws IOException {
+        Properties properties = new Properties();
+        properties.load(new FileInputStream("java_conversion.properties"));
+
+        // setting properties
+        JAVA = properties.getProperty("JAVA");
+        BREAKPOINT = properties.getProperty("BREAKPOINT");
+        CODE_BLOCK_START = properties.getProperty("CODE_BLOCK_START");
+        CODE_BLOCK_END = properties.getProperty("CODE_BLOCK_END");
+    }
+
+
+    /**
+     * Only method that user can communicate with this class.
+     * It is used to convert Java/XML/FTL code to HTML.
+     * <p>
+     * FIXME: 18.09.2021 Right now only Java code parsing is functioning.
+     *
+     * @param textFile name of text file that contains java code to convert.
+     * @return converted to HTML Java code.
+     * @throws Exception if any errors occur during parsing the java code in file from {@param textFile}.
+     */
+    public String convert(String textFile) throws Exception {
         String code = "";
         fileReader.openConnection(textFile);
 
-        String codeType = fileReader.readline();
+        String codeType = fileReader.readLine();
 
         if (JAVA.equals(codeType)) {
             code = convertJava();
@@ -40,14 +81,20 @@ public class CodeHTMLConverter {
     }
 
 
-    private static String convertJava() throws Exception {
+    /**
+     * Internal method used for parsing Java code into HTML.
+     *
+     * @return converted to HTML Java code.
+     * @throws Exception if any errors occur during parsing the java code.
+     */
+    private String convertJava() throws Exception {
         StringBuilder generalStringBuilder = new StringBuilder();
-        String nextLine = fileReader.readline();
+        String nextLine = fileReader.readLine();
 
         if (!CODE_BLOCK_START.equals(nextLine)) {
             throw new Exception("Block of code must start with:\n" + CODE_BLOCK_START);
         } else {
-            nextLine = fileReader.readline();
+            nextLine = fileReader.readLine();
         }
 
         StringBuilder multiLineCommentStringBuilder = null;
@@ -83,18 +130,18 @@ public class CodeHTMLConverter {
                 multiLineCommentStringBuilder = new StringBuilder();
                 if (i != 0) {
                     for (int j = 0; j < i; j++) {
-                        multiLineCommentStringBuilder.append("&#160;");
+                        multiLineCommentStringBuilder.append(SPACE_SIGN);
                     }
                 }
                 multiLineCommentStringBuilder.append(nextLine);
                 multiLineCommentStringBuilder.append(BR_TAG);
-                nextLine = fileReader.readline();
+                nextLine = fileReader.readLine();
                 devComment = true;
                 continue;
             } else if ((nextLine.startsWith("**/") || nextLine.contains("**/")) && multiLineCommentStringBuilder != null && devComment) {
                 if (i != 0) {
                     for (int j = 0; j < i; j++) {
-                        multiLineCommentStringBuilder.append("&#160;");
+                        multiLineCommentStringBuilder.append(SPACE_SIGN);
                     }
                 }
                 multiLineCommentStringBuilder.append(nextLine);
@@ -104,18 +151,18 @@ public class CodeHTMLConverter {
                 multiLineCommentStringBuilder = new StringBuilder();
                 if (i != 0) {
                     for (int j = 0; j < i; j++) {
-                        multiLineCommentStringBuilder.append("&#160;");
+                        multiLineCommentStringBuilder.append(SPACE_SIGN);
                     }
                 }
                 multiLineCommentStringBuilder.append(nextLine);
                 multiLineCommentStringBuilder.append(BR_TAG);
-                nextLine = fileReader.readline();
+                nextLine = fileReader.readLine();
                 devComment = false;
                 continue;
             } else if ((nextLine.startsWith("*/") || nextLine.contains("*/")) && multiLineCommentStringBuilder != null && !devComment && !nextLine.contains("**/")) {
                 if (i != 0) {
                     for (int j = 0; j < i; j++) {
-                        multiLineCommentStringBuilder.append("&#160;");
+                        multiLineCommentStringBuilder.append(SPACE_SIGN);
                     }
                 }
                 multiLineCommentStringBuilder.append(nextLine);
@@ -124,155 +171,58 @@ public class CodeHTMLConverter {
             } else if (multiLineCommentStringBuilder != null) {
                 if (i != 0) {
                     for (int j = 0; j < i; j++) {
-                        multiLineCommentStringBuilder.append("&#160;");
+                        multiLineCommentStringBuilder.append(SPACE_SIGN);
                     }
                 }
                 multiLineCommentStringBuilder.append(nextLine);
                 multiLineCommentStringBuilder.append(BR_TAG);
-                nextLine = fileReader.readline();
+                nextLine = fileReader.readLine();
                 continue;
             } else {
                 if (i != 0) {
                     for (int j = 0; j < i; j++) {
-                        localStringBuilder.append("&#160;");
+                        localStringBuilder.append(SPACE_SIGN);
                     }
                 }
                 //Step 2 - find keywords
-                // () и . - знаки, которые показывают, что в строке нужно более детальное рассмотрение.
-                if (!nextLine.contains("().")) {
-                    localStringBuilder = convertLine(nextLine, localStringBuilder, " ");
-                }
+                localStringBuilder = convertLine(nextLine, localStringBuilder, " ");
             }
 
             //final step - put everything into a standard <p></p> tags
             generalStringBuilder.append(HTMLTags.getCodeInTag(localStringBuilder.toString(), Tags.P_TAG));
 
-            nextLine = fileReader.readline();
+            nextLine = fileReader.readLine();
         }
 
-        nextLine = fileReader.readline();
+        nextLine = fileReader.readLine();
         if (BREAKPOINT.equals(nextLine)) {
             return HTMLTags.getCodeInTag(HTMLTags.getCodeInTag(generalStringBuilder.toString(), Tags.DIV_CODE_BLOCK), Tags.DIV_CODE_CONTAINER);
         } else {
-            throw new Exception("Ты что, дурачок? Почему твой блок не заканчивается " + BREAKPOINT + " ?");
+            throw new Exception("Your code segment must end with: " + BREAKPOINT);
         }
 
 
     }
 
-    // Depreciated :)
-    private static StringBuilder convertOneLineWithNoSpecialSymbols(String nextLine, StringBuilder localStringBuilder) throws Exception {
-        // normal line with no brackets or stops.
-        String[] words = nextLine.split(" ");// split into words
-        if (words.length == 0) {//i.e. this is just an empty line
-            return new StringBuilder(BR_TAG);
-        }
-        StringBuilder StringInCode = null;
-        boolean isInString = false;
-        int wordDifference = 0;
-        for (int j = 0; j < words.length; j++) {
-            int l = j + wordDifference;
-            if (!(l < words.length)) {
-                break;
-            }
-            String word = words[l];
-            boolean isEnd = false;
-            if (word.endsWith(";")) {
-                word = word.replace(";", "");
-                isEnd = true;
-            }
-
-
-            if (word.contains("(") && !isInString) {
-                // step 1 - get line inside brackets
-                char[] chars = nextLine.toCharArray();
-                int posStart = -1;
-                int posEnd = -1;
-                int i = 0;
-                // finding the right-most (
-                while (posStart == -1) {
-                    if (chars[i] == '(') {
-                        posStart = i;
-                        i = 0;
-                    } else {
-                        i++;
-                    }
-                }
-
-                // finding the left-most )
-                while (posEnd == -1) {
-                    if (chars[i] == ')') {
-                        posEnd = i;
-                    } else {
-                        i++;
-                    }
-                }
-                localStringBuilder.append(word.split("\\(")[0]).append("(");
-                String stringInBrackets = nextLine.substring(posStart + 1, posEnd + 1);
-                localStringBuilder.append(convertOneLineWithNoSpecialSymbols(stringInBrackets, new StringBuilder()).toString());
-
-                // now we need to start looking at the words that are left after the brackets
-                String wordsAfterBrackets[] = (nextLine.substring(posEnd)).split(" ");
-
-                if (wordsAfterBrackets.length == 1) {
-                    localStringBuilder.append(convertOneLineWithNoSpecialSymbols(wordsAfterBrackets[0], localStringBuilder));
-                }
-                wordDifference = words.length - wordsAfterBrackets.length;
-
-            } else if (word.startsWith("@")) {//i.e. it is a annotation
-                localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_ANNOTATION));
-            } else if (JavaKeyWords.isKeyWord(word)) {// i.e. it is a key word
-                localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_KEY_WORD));
-                localStringBuilder.append(" ");
-            } else if (word.startsWith("//") || word.contains("//")) {// i.e. the rest of the line is comment
-                StringBuilder restOfLine = new StringBuilder();
-                for (int k = j; k < words.length; k++) {
-                    restOfLine.append(words[k]);
-                    if (k != words.length - 1) {
-                        restOfLine.append(" ");
-                    }
-                }
-                localStringBuilder.append(HTMLTags.getCodeInTag(restOfLine.toString(), Tags.SPAN_COMMENT));
-                break;
-            } else if (word.startsWith("\"")) {// i.e. it is a String
-                StringInCode = new StringBuilder();
-                StringInCode.append(word);
-
-                if (word.endsWith("\"")) {
-                    localStringBuilder.append(HTMLTags.getCodeInTag(StringInCode.toString(), Tags.SPAN_STRING));
-                    StringInCode = null;
-                    isInString = false;
-                } else {
-                    StringInCode.append(" ");
-                    isInString = true;
-                }
-            } else if (word.endsWith("\"") && StringInCode != null) {
-                StringInCode.append(word);
-                localStringBuilder.append(HTMLTags.getCodeInTag(StringInCode.toString(), Tags.SPAN_STRING));
-                StringInCode = null;
-                isInString = false;
-            } else if (isInString) {
-                if (StringInCode == null) {
-                    throw new Exception("This is an internal server error caused by the fact that you haven't began a String");
-                }
-                StringInCode.append(word);
-                StringInCode.append(" ");
-            } else {// i.e. not a special symbol
-                localStringBuilder.append(word);
-                localStringBuilder.append(" ");
-            }
-            if (isEnd) {
-                localStringBuilder.append(HTMLTags.getCodeInTag(";", Tags.SPAN_KEY_WORD));
-            }
-
-
-        }
-
-        return localStringBuilder;
-    }
-
-
-    // If you put a String into a line that is split by .'s, then make sure that the String is all in one word.
+    /**
+     * This method turns one line of Java code into its HTML analogue.
+     * <p>
+     * This method identifies keywords inside {@link Tags} and uses special annotation to identify them.
+     * This method will perform the same kind of search for annotations, line comments and Strings.
+     * <p>
+     * This method will also identify any keywords, annotations and Strings inside the line if they are separated by '.'
+     * or inside brackets.
+     * <p>
+     * <p>
+     * FIXME: 18.09.2021 Current system only works if String that is stored inside line, separated by .'s, is written all in one word.
+     *
+     * @param line               {@link String} one line of Java code to convert to HTML.
+     * @param localStringBuilder {@link StringBuilder} that contains data associated with all spaces in the {@param line}.
+     * @param separator          {@link String} a symbol combination used to indicate where new word begins. By default,
+     *                           this value should be set to " ". But it also supports "\\.".
+     * @return StringBuilder containing a single line of code converted to HTML.
+     * @throws Exception is thrown if {@param line} has any errors.
+     **/
     private static StringBuilder convertLine(String line, StringBuilder localStringBuilder, String separator) throws Exception {
         // right now we make the following assumptions:
         // a single line does not use any words that are grouped either by brackets or by fullstops.
@@ -319,7 +269,7 @@ public class CodeHTMLConverter {
             if (isString) { // if we have found " in the line, we assume that there is a String. We will go through words until we find a pairing "
                 stringBuilder.append(word);
 
-                if (word.endsWith("\"") && !word.endsWith("\\\"")) {
+                if ((word.endsWith("\"") && !word.endsWith("\\\"")) || (word.endsWith("\'") && !word.endsWith("\\\'"))) {
                     isString = false;
                     localStringBuilder.append(HTMLTags.getCodeInTag(stringBuilder.toString(), Tags.SPAN_STRING));
                     if (!endsWithSemiColumn) {
@@ -391,8 +341,8 @@ public class CodeHTMLConverter {
                     containsLineComment = true;
                     lineCommentBuilder.append(word);
                     lineCommentBuilder.append(" ");
-                } else if (word.startsWith("\"")) { // it is a String
-                    if (word.endsWith("\"") && !word.endsWith("\\\"")) {
+                } else if (word.startsWith("\"") || word.startsWith("\'")) { // it is a String
+                    if ((word.endsWith("\"") && !word.endsWith("\\\"")) || (word.endsWith("\'") && !word.endsWith("\\\'"))) {
                         localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_STRING));
                         if (!endsWithSemiColumn) {
                             localStringBuilder.append(separator);
@@ -403,7 +353,7 @@ public class CodeHTMLConverter {
                         stringBuilder.append(" ");
                     }
                 } else { // it is a common words
-                    localStringBuilder.append(getCodeFormatedFromSpecialSymbols(word));
+                    localStringBuilder.append(getCodeFormattedFromSpecialSymbols(word));
                     if (!endsWithSemiColumn) {
                         localStringBuilder.append(separator);
                     }
@@ -436,16 +386,25 @@ public class CodeHTMLConverter {
     }
 
 
-    private static String getCodeFormatedFromSpecialSymbols(String code){
+    /**
+     * This method takes some String and replaces all special symbols to their HTML analogue, ensuring safe conversion
+     * from Java to HTML.
+     * <p>
+     * Currently, system works only for < and > symbols.
+     *
+     * @param code this is a piece of code that is about to go into HTML tags.
+     * @return reformatted code that has all special symbols changed to appropriate HTML values.
+     **/
+    @NotNull
+    private static String getCodeFormattedFromSpecialSymbols(@NotNull String code) {
         char[] chars = code.toCharArray();
         StringBuilder codeRebuilt = new StringBuilder();
         for (int i = 0; i < chars.length; i++) {
-            if(chars[i] == '<'){
-                codeRebuilt.append("&#60;");
-            }else if(chars[i] == '>' ){
-                codeRebuilt.append("&#62;");
-            }
-            else {
+            if (chars[i] == '<') {
+                codeRebuilt.append(LESS_THAN_SIGN);
+            } else if (chars[i] == '>') {
+                codeRebuilt.append(GREATER_THAN_SIGN);
+            } else {
                 codeRebuilt.append(chars[i]);
             }
         }
