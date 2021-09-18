@@ -64,7 +64,8 @@ public class HTMLTags {
     }
 
     private static String putCodeInTags(String code, String startTag, String finishTag){
-        return startTag + code +
+
+        return startTag + code+
                 finishTag;
     }
 

@@ -272,7 +272,6 @@ public class CodeHTMLConverter {
     }
 
 
-
     // If you put a String into a line that is split by .'s, then make sure that the String is all in one word.
     private static StringBuilder convertLine(String line, StringBuilder localStringBuilder, String separator) throws Exception {
         // right now we make the following assumptions:
@@ -293,11 +292,18 @@ public class CodeHTMLConverter {
         boolean containsLineComment = false;
         boolean isString = false;
         boolean isWordThatIsSeparatedByDots = false;
+        boolean isDataInBrackets = false;
         StringBuilder lineCommentBuilder = new StringBuilder();
         StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder bracketsStringBuilder = new StringBuilder();
+        int numberOfSeparators = 0;
         for (int i = 0; i < words.length; i++) {
             // We need to test every word
-            String word = words[i];
+            int k = i + numberOfSeparators;
+            if (!(k < words.length)) {
+                return localStringBuilder;
+            }
+            String word = words[k];
 
             if (containsLineComment) { // if at some point line had // the rest of the line is considered to be a comment
                 lineCommentBuilder.append(word);
@@ -316,9 +322,9 @@ public class CodeHTMLConverter {
                 if (word.endsWith("\"") && !word.endsWith("\\\"")) {
                     isString = false;
                     localStringBuilder.append(HTMLTags.getCodeInTag(stringBuilder.toString(), Tags.SPAN_STRING));
-                    if(!endsWithSemiColumn){
-                        stringBuilder.append(" ");
-                    }else {
+                    if (!endsWithSemiColumn) {
+                        localStringBuilder.append(" ");
+                    } else {
                         localStringBuilder.append(HTMLTags.getCodeInTag("; ", Tags.SPAN_KEY_WORD));
                         endsWithSemiColumn = false;
                     }
@@ -329,7 +335,40 @@ public class CodeHTMLConverter {
                 continue;
             }
 
+            if (word.contains("(")) {
+                // this means that we need to extract words that are inside the brackets
 
+                // Step 1: Find the closing bracket
+                char[] chars = line.toCharArray();// todo: here is a great area for the optimisation; though, I have no time to do it now.
+                int positionOfOpeningBracket = -1;
+                int positionOfClosingBracket = -1;
+                numberOfSeparators = 0;
+                char sep = separator.charAt(separator.length() - 1);
+                for (int j = 0; j < chars.length; j++) {
+                    if (chars[j] == '(' && positionOfOpeningBracket == -1) {
+                        positionOfOpeningBracket = j;
+                    } else if (chars[j] == ')') {
+                        positionOfClosingBracket = j;
+                    }
+                }
+
+                for (int j = positionOfOpeningBracket; j < positionOfClosingBracket; j++) {
+                    if (chars[j] == sep) {
+                        numberOfSeparators++;
+                    }
+                }
+//                numberOfSeparators -= (i);
+                if (positionOfClosingBracket == -1 || positionOfOpeningBracket == -1) {
+                    throw new Exception("This system has to have \')\' at the end of the same line where you have your \'(\'");
+                }
+
+                isDataInBrackets = true;
+                String dataInBrackets = line.substring(positionOfOpeningBracket + 1, positionOfClosingBracket);
+                bracketsStringBuilder = convertLine(dataInBrackets, bracketsStringBuilder, separator);
+                bracketsStringBuilder.deleteCharAt(bracketsStringBuilder.length() - 1);
+
+                word = word.split("\\(")[0];
+            }
 
             if (word.contains(".") && !word.contains(". ")) {
                 // if word contains '.' then it is made out of multiple words, and hence every
@@ -344,6 +383,7 @@ public class CodeHTMLConverter {
                 // check what the word is equal to
                 if (word.startsWith("@")) { // it is an annotation
                     localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_ANNOTATION));
+                    localStringBuilder.append(separator);
                 } else if (JavaKeyWords.isKeyWord(word)) {// it is a key word
                     localStringBuilder.append(HTMLTags.getCodeInTag(word, Tags.SPAN_KEY_WORD));
                     localStringBuilder.append(separator);
@@ -363,7 +403,7 @@ public class CodeHTMLConverter {
                         stringBuilder.append(" ");
                     }
                 } else { // it is a common words
-                    localStringBuilder.append(word);
+                    localStringBuilder.append(getCodeFormatedFromSpecialSymbols(word));
                     if (!endsWithSemiColumn) {
                         localStringBuilder.append(separator);
                     }
@@ -372,6 +412,13 @@ public class CodeHTMLConverter {
                 isWordThatIsSeparatedByDots = false;
             }
             // at the end, if we need to add semi column we need to add it:
+            if (isDataInBrackets) {
+                localStringBuilder.append("(");
+                localStringBuilder.append(bracketsStringBuilder.toString());
+                localStringBuilder.append(")");
+                localStringBuilder.append(separator);
+                isDataInBrackets = false;
+            }
             if (endsWithSemiColumn) {
                 localStringBuilder.append(HTMLTags.getCodeInTag("; ", Tags.SPAN_KEY_WORD));
                 endsWithSemiColumn = false;
@@ -386,5 +433,23 @@ public class CodeHTMLConverter {
             localStringBuilder.deleteCharAt(localStringBuilder.length() - 1); // we do not want our line that is separated by . to end with a dot
         }
         return localStringBuilder;
+    }
+
+
+    private static String getCodeFormatedFromSpecialSymbols(String code){
+        char[] chars = code.toCharArray();
+        StringBuilder codeRebuilt = new StringBuilder();
+        for (int i = 0; i < chars.length; i++) {
+            if(chars[i] == '<'){
+                codeRebuilt.append("&#60;");
+            }else if(chars[i] == '>' ){
+                codeRebuilt.append("&#62;");
+            }
+            else {
+                codeRebuilt.append(chars[i]);
+            }
+        }
+
+        return codeRebuilt.toString();
     }
 }
