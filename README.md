@@ -26,8 +26,11 @@ This program uses a set of predefined Strings to identify where code entered by 
 These values can be found inside the conversion_constants.properties file.
 
  JAVA <-- value used for specifying that code type is JAVA
+ 
  BREAKPOINT <-- value used for specifying that program should terminate running through the file
+ 
  CODE_BLOCK_START <--- value used for specifying the place where the block of code that requires translation starts
+ 
  CODE_BLOCK_END <--- value used for specifying the place where the block of code that requires translation ends
  
  Here are the default values for the special values:
