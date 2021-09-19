@@ -57,4 +57,4 @@ In the future, the program will also be able to perform manipulations on XML and
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[MIT](https://github.com/adtimokhin/Code_HTML_Converter/blob/master/LICENSE)
