@@ -92,4 +92,8 @@ In the future, the program will also be able to perform manipulations on XML and
 
 ## License
 
+<<<<<<< HEAD
 [MIT](https://github.com/adtimokhin/Code_HTML_Converter/blob/master/LICENSE)
+=======
+[MIT](https://github.com/adtimokhin/Code_HTML_Converter/blob/master/LICENSE)
+>>>>>>> origin/master
