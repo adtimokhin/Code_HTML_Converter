@@ -41,12 +41,13 @@ public class CodeHTMLConverter {
      * Loads properties into the {@link CodeHTMLConverter} object for later use in code.
      *
      * @throws IOException if there was an error with getting properties from
-     *                     <a href= "conversion_constants.properties"> file </a>.
+     *                     <a href= "../resources/conversion_constants.properties"> file </a>.
      */
     public CodeHTMLConverter() throws IOException {
         Properties properties = new Properties();
-        properties.load(new FileInputStream("conversion_constants.properties"));
+        FileInputStream fileInputStream = new FileInputStream("/Users/atimokhina/Desktop/FriendPath/src/main/resources/conversion_constants.properties");
 
+        properties.load(fileInputStream);
         // setting properties
         JAVA = properties.getProperty("JAVA");
         BREAKPOINT = properties.getProperty("BREAKPOINT");
@@ -72,7 +73,7 @@ public class CodeHTMLConverter {
         String codeType = fileReader.readLine();
 
         if (JAVA.equals(codeType)) {
-            code = convertJava();
+            code = convertJava(fileReader.readLine());
         }
 
         fileReader.closeConnection();
@@ -87,9 +88,9 @@ public class CodeHTMLConverter {
      * @return converted to HTML Java code.
      * @throws Exception if any errors occur during parsing the java code.
      */
-    private String convertJava() throws Exception {
+    private String convertJava(String line) throws Exception {
         StringBuilder generalStringBuilder = new StringBuilder();
-        String nextLine = fileReader.readLine();
+        String nextLine = line;
 
         if (!CODE_BLOCK_START.equals(nextLine)) {
             throw new Exception("Block of code must start with:\n" + CODE_BLOCK_START);
@@ -195,8 +196,15 @@ public class CodeHTMLConverter {
         }
 
         nextLine = fileReader.readLine();
+
+        StringBuilder codeSoFar = new StringBuilder(HTMLTags.getCodeInTag(HTMLTags.getCodeInTag(generalStringBuilder.toString(), Tags.DIV_CODE_BLOCK), Tags.DIV_CODE_CONTAINER));
+        if(CODE_BLOCK_START.equals(nextLine)){
+            codeSoFar.append("\n");
+            codeSoFar.append(convertJava(nextLine));
+            return codeSoFar.toString();
+        }
         if (BREAKPOINT.equals(nextLine)) {
-            return HTMLTags.getCodeInTag(HTMLTags.getCodeInTag(generalStringBuilder.toString(), Tags.DIV_CODE_BLOCK), Tags.DIV_CODE_CONTAINER);
+            return codeSoFar.toString();
         } else {
             throw new Exception("Your code segment must end with: " + BREAKPOINT);
         }
