@@ -23,7 +23,7 @@ Example:
 ## HOW TO FORMAT CODE IN THE FILE:
 
 This program uses a set of predefined Strings to identify where code entered by user ends/starts, for example.
-These values can be found inside the conversion_constants.properties file.
+These values can be found inside the [conversion_constants.properties file](https://github.com/adtimokhin/Code_HTML_Converter/blob/master/src/main/resources/conversion_constants.properties).
 
  JAVA <-- value used for specifying that code type is JAVA
  
