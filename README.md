@@ -48,6 +48,41 @@ In order to format the code, every special value should be placed at the start o
 Thus, the values chosen should be unique and must not appear at the actual code.
 
 
+This is how your code file can look like:
+
+```text
+-- JAVA --
+BLOCKQUE.START
+    /**
+     * This method takes some String and replaces all special symbols to their HTML analogue, ensuring safe conversion from Java to HTML
+     *
+     * Currently, system works only for < and > symbols.
+     *
+     *
+     * @param code this is a piece of code that is about to go into HTML tags.
+     * @return reformatted code that has all special symbols changed to appropriate HTML values
+     **/
+    @NotNull
+    private static String getCodeFormattedFromSpecialSymbols(@NotNull String code) {
+        char[] chars = code.toCharArray();
+        StringBuilder codeRebuilt = new StringBuilder();
+        for (int i = 0; i < chars.length; i++) {
+            if(chars[i] == '<') {
+                codeRebuilt.append("&#60;");
+            }
+            else if(chars[i] == '>' ) {
+                codeRebuilt.append("&#62;");
+            }
+            else {
+                codeRebuilt.append(chars[i]);
+            }
+        }
+
+        return codeRebuilt.toString();
+    }
+BLOCKQUE.END
+--
+```
 
 ## WHAT CODE CAN BE PARSED:
 
