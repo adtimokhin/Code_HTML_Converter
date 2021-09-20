@@ -103,6 +103,7 @@ public class CodeHTMLConverter {
             nextLine = fileReader.readLine();
         }
         StringBuilder multiLineCommentStringBuilder = null;
+        boolean isDevComment = false;
         while (!CODE_BLOCK_END.equals(nextLine)) {
             if (nextLine.equals("")) {
                 generalStringBuilder.append(BR_TAG);
@@ -134,26 +135,34 @@ public class CodeHTMLConverter {
                         multiLineCommentStringBuilder.append(SPACE_SIGN);
                     }
                 }
-                multiLineCommentStringBuilder.append(nextLine);
+                multiLineCommentStringBuilder.append(getCodeFormattedFromSpecialSymbols(nextLine));
                 multiLineCommentStringBuilder.append(BR_TAG);
-                nextLine = fileReader.readLine();
-                continue;
-            } else if (nextLine.startsWith("-->") && multiLineCommentStringBuilder != null) {
+
+                if (!nextLine.endsWith("-->")) {
+                    isDevComment = true;
+//                    nextLine = fileReader.readLine();
+                }else {
+                    localStringBuilder.append(HTMLTags.getCodeInTag(multiLineCommentStringBuilder.toString(), Tags.SPAN_COMMENT));
+                    isDevComment = false;
+                    multiLineCommentStringBuilder = null;
+                }
+            } else if (nextLine.endsWith("-->") && multiLineCommentStringBuilder != null) {
                 if (i != 0) {
                     for (int j = 0; j < i; j++) {
                         multiLineCommentStringBuilder.append(SPACE_SIGN);
                     }
                 }
-                multiLineCommentStringBuilder.append(nextLine);
-                localStringBuilder.append(HTMLTags.getCodeInTag(multiLineCommentStringBuilder.toString(), Tags.SPAN_DEV_COMMENT));
+                multiLineCommentStringBuilder.append(getCodeFormattedFromSpecialSymbols(nextLine));
+                localStringBuilder.append(HTMLTags.getCodeInTag(multiLineCommentStringBuilder.toString(), Tags.SPAN_COMMENT));
                 multiLineCommentStringBuilder = null;
-            } else if (multiLineCommentStringBuilder != null) {
+                isDevComment = false;
+            } else if (multiLineCommentStringBuilder != null && isDevComment) {
                 if (i != 0) {
                     for (int j = 0; j < i; j++) {
                         multiLineCommentStringBuilder.append(SPACE_SIGN);
                     }
                 }
-                multiLineCommentStringBuilder.append(nextLine);
+                multiLineCommentStringBuilder.append(getCodeFormattedFromSpecialSymbols(nextLine));
                 multiLineCommentStringBuilder.append(BR_TAG);
                 nextLine = fileReader.readLine();
                 continue;
