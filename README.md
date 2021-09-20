@@ -35,10 +35,10 @@ These values can be found inside the [conversion_constants.properties file](http
  
  Here are the default values for the special values:
  ```java
-JAVA = "-- JAVA --"
-BREAKPOINT = "--"
-CODE_BLOCK_START = "BLOCKQUE.START"
-CODE_BLOCK_END = "BLOCKQUE.END"
+JAVA = -- JAVA --
+BREAKPOINT = --
+CODE_BLOCK_START = BLOCKQUE.START
+CODE_BLOCK_END = BLOCKQUE.END
  ```
 
 
@@ -92,8 +92,5 @@ In the future, the program will also be able to perform manipulations on XML and
 
 ## License
 
-<<<<<<< HEAD
 [MIT](https://github.com/adtimokhin/Code_HTML_Converter/blob/master/LICENSE)
-=======
-[MIT](https://github.com/adtimokhin/Code_HTML_Converter/blob/master/LICENSE)
->>>>>>> origin/master
+
