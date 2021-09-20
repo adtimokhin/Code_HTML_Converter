@@ -34,8 +34,9 @@ These values can be found inside the [conversion_constants.properties file](http
  CODE_BLOCK_END <--- value used for specifying the place where the block of code that requires translation ends
  
  Here are the default values for the special values:
- ```java
-JAVA = -- JAVA --
+ ```properties
+JAVA = --JAVA--
+XML = --XML--
 BREAKPOINT = --
 CODE_BLOCK_START = BLOCKQUE.START
 CODE_BLOCK_END = BLOCKQUE.END
@@ -84,10 +85,25 @@ BLOCKQUE.END
 --
 ```
 
+This is how you can fill in the XML file:
+```text
+--XML--
+BLOCKQUE.START
+<dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>5.3.3.Final</version>
+</dependency>
+BLOCKQUE.END
+--
+```
+
+### Please note, it is most easy to access the file with your code from the program if the file is located under the project's folder.
+
 ## WHAT CODE CAN BE PARSED:
 
-Currently, system allows to parse only Java code.
-In the future, the program will also be able to perform manipulations on XML and FTL code.
+Currently, system allows to parse Java code and simple XML code.
+In the future, the program will also be able to perform manipulations on FTL code.
 
 
 ## License
