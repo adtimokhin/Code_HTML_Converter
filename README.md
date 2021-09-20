@@ -52,7 +52,7 @@ Thus, the values chosen should be unique and must not appear at the actual code.
 This is how your code file can look like:
 
 ```text
--- JAVA --
+--JAVA--
 BLOCKQUE.START
     /**
      * This method takes some String and replaces all special symbols to their HTML analogue, ensuring safe conversion from Java to HTML
