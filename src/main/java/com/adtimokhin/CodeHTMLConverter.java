@@ -28,13 +28,15 @@ public class CodeHTMLConverter {
      **/
     private final String JAVA; // MARKS CODE AS JAVA CODE
 
+    private final String XML;
+
     private final String BREAKPOINT; // MARKS THE END OF CODE RUNNING
 
     private final String CODE_BLOCK_START; // MARKS THE START OF CODE BLOCK.
-                                          // WHERE THE ACTUAL CODE THAT WILL BE GROUPED TOGETHER STARTS
+    // WHERE THE ACTUAL CODE THAT WILL BE GROUPED TOGETHER STARTS
 
     private final String CODE_BLOCK_END; // MARKS THE END OF CODE BLOCK.
-                                        // WHERE THE ACTUAL CODE THAT WILL BE GROUPED TOGETHER ENDS
+    // WHERE THE ACTUAL CODE THAT WILL BE GROUPED TOGETHER ENDS
 
 
     /**
@@ -50,6 +52,7 @@ public class CodeHTMLConverter {
         properties.load(fileInputStream);
         // setting properties
         JAVA = properties.getProperty("JAVA");
+        XML = properties.getProperty("XML");
         BREAKPOINT = properties.getProperty("BREAKPOINT");
         CODE_BLOCK_START = properties.getProperty("CODE_BLOCK_START");
         CODE_BLOCK_END = properties.getProperty("CODE_BLOCK_END");
@@ -74,6 +77,8 @@ public class CodeHTMLConverter {
 
         if (JAVA.equals(codeType)) {
             code = convertJava(fileReader.readLine());
+        } else if (XML.equals(codeType)) {
+            code = convertXML(fileReader.readLine());
         }
 
         fileReader.closeConnection();
@@ -81,10 +86,113 @@ public class CodeHTMLConverter {
         return code;
     }
 
+    /**
+     * Internal method used for parsing XML code into HTML.
+     *
+     *
+     * @param line {@link String} that contains a line XML code that requires parsing.
+     * @return converted to HTML XML code.
+     * @throws Exception if any errors occur during parsing the XML code.
+     */
+    private String convertXML(String line) throws Exception {
+        StringBuilder generalStringBuilder = new StringBuilder();
+        String nextLine = line;
+        if (!CODE_BLOCK_START.equals(nextLine)) {
+            throw new Exception("Block of code must start with:\n" + CODE_BLOCK_START);
+        } else {
+            nextLine = fileReader.readLine();
+        }
+        StringBuilder multiLineCommentStringBuilder = null;
+        while (!CODE_BLOCK_END.equals(nextLine)) {
+            if (nextLine.equals("")) {
+                generalStringBuilder.append(BR_TAG);
+            }
+
+            StringBuilder localStringBuilder = new StringBuilder();
+            char[] chars = nextLine.toCharArray();
+
+            // entering all spaces that come at the start of the line
+            int i = 0;
+            for (char aChar : chars) {
+                if (aChar == " ".toCharArray()[0]) {
+//                    localStringBuilder.append("&#160;");
+                    i++;
+                } else {
+                    break;
+                }
+            }
+            // figuring out all of the key-words and stuff:
+
+            // Step 1 - remove spaces calculated before
+            nextLine = nextLine.substring(i);
+            // Multi-line comments
+            // dev-comments
+            if ((nextLine.startsWith("<!--")) && multiLineCommentStringBuilder == null) {
+                multiLineCommentStringBuilder = new StringBuilder();
+                if (i != 0) {
+                    for (int j = 0; j < i; j++) {
+                        multiLineCommentStringBuilder.append(SPACE_SIGN);
+                    }
+                }
+                multiLineCommentStringBuilder.append(nextLine);
+                multiLineCommentStringBuilder.append(BR_TAG);
+                nextLine = fileReader.readLine();
+                continue;
+            } else if (nextLine.startsWith("-->") && multiLineCommentStringBuilder != null) {
+                if (i != 0) {
+                    for (int j = 0; j < i; j++) {
+                        multiLineCommentStringBuilder.append(SPACE_SIGN);
+                    }
+                }
+                multiLineCommentStringBuilder.append(nextLine);
+                localStringBuilder.append(HTMLTags.getCodeInTag(multiLineCommentStringBuilder.toString(), Tags.SPAN_DEV_COMMENT));
+                multiLineCommentStringBuilder = null;
+            } else if (multiLineCommentStringBuilder != null) {
+                if (i != 0) {
+                    for (int j = 0; j < i; j++) {
+                        multiLineCommentStringBuilder.append(SPACE_SIGN);
+                    }
+                }
+                multiLineCommentStringBuilder.append(nextLine);
+                multiLineCommentStringBuilder.append(BR_TAG);
+                nextLine = fileReader.readLine();
+                continue;
+            } else {
+                if (i != 0) {
+                    for (int j = 0; j < i; j++) {
+                        localStringBuilder.append(SPACE_SIGN);
+                    }
+                }
+                //Step 2 - find keywords
+                localStringBuilder = convertXMLLine(nextLine, localStringBuilder);
+            }
+            //final step - put everything into a standard <p></p> tags
+            generalStringBuilder.append(HTMLTags.getCodeInTag(localStringBuilder.toString(), Tags.P_TAG));
+
+            nextLine = fileReader.readLine();
+        }
+
+        nextLine = fileReader.readLine();
+
+        StringBuilder codeSoFar = new StringBuilder(HTMLTags.getCodeInTag(HTMLTags.getCodeInTag(generalStringBuilder.toString(), Tags.DIV_CODE_BLOCK), Tags.DIV_CODE_CONTAINER));
+        if (CODE_BLOCK_START.equals(nextLine)) {
+            codeSoFar.append("\n");
+            codeSoFar.append(convertJava(nextLine));
+            return codeSoFar.toString();
+        }
+        if (BREAKPOINT.equals(nextLine)) {
+            return codeSoFar.toString();
+        } else {
+            throw new Exception("Your code segment must end with: " + BREAKPOINT);
+        }
+    }
+
 
     /**
      * Internal method used for parsing Java code into HTML.
      *
+     *
+     * @param line {@link String} that contains a line Java code that requires parsing.
      * @return converted to HTML Java code.
      * @throws Exception if any errors occur during parsing the java code.
      */
@@ -186,7 +294,7 @@ public class CodeHTMLConverter {
                     }
                 }
                 //Step 2 - find keywords
-                localStringBuilder = convertLine(nextLine, localStringBuilder, " ");
+                localStringBuilder = convertJavaLine(nextLine, localStringBuilder, " ");
             }
 
             //final step - put everything into a standard <p></p> tags
@@ -198,7 +306,7 @@ public class CodeHTMLConverter {
         nextLine = fileReader.readLine();
 
         StringBuilder codeSoFar = new StringBuilder(HTMLTags.getCodeInTag(HTMLTags.getCodeInTag(generalStringBuilder.toString(), Tags.DIV_CODE_BLOCK), Tags.DIV_CODE_CONTAINER));
-        if(CODE_BLOCK_START.equals(nextLine)){
+        if (CODE_BLOCK_START.equals(nextLine)) {
             codeSoFar.append("\n");
             codeSoFar.append(convertJava(nextLine));
             return codeSoFar.toString();
@@ -228,10 +336,10 @@ public class CodeHTMLConverter {
      * @param localStringBuilder {@link StringBuilder} that contains data associated with all spaces in the {@param line}.
      * @param separator          {@link String} a symbol combination used to indicate where new word begins. By default,
      *                           this value should be set to " ". But it also supports "\\.".
-     * @return StringBuilder containing a single line of code converted to HTML.
+     * @return {@link StringBuilder} containing a single line of code converted to HTML.
      * @throws Exception is thrown if {@param line} has any errors.
      **/
-    private static StringBuilder convertLine(String line, StringBuilder localStringBuilder, String separator) throws Exception {
+    private static StringBuilder convertJavaLine(String line, StringBuilder localStringBuilder, String separator) throws Exception {
         // right now we make the following assumptions:
         // a single line does not use any words that are grouped either by brackets or by fullstops.
 
@@ -322,7 +430,7 @@ public class CodeHTMLConverter {
 
                 isDataInBrackets = true;
                 String dataInBrackets = line.substring(positionOfOpeningBracket + 1, positionOfClosingBracket);
-                bracketsStringBuilder = convertLine(dataInBrackets, bracketsStringBuilder, separator);
+                bracketsStringBuilder = convertJavaLine(dataInBrackets, bracketsStringBuilder, separator);
                 bracketsStringBuilder.deleteCharAt(bracketsStringBuilder.length() - 1);
 
                 word = word.split("\\(")[0];
@@ -331,7 +439,7 @@ public class CodeHTMLConverter {
             if (word.contains(".") && !word.contains(". ")) {
                 // if word contains '.' then it is made out of multiple words, and hence every
                 // single one of them shall be treated separately
-                localStringBuilder.append(convertLine(word, new StringBuilder(), "\\."));
+                localStringBuilder.append(convertJavaLine(word, new StringBuilder(), "\\."));
                 isWordThatIsSeparatedByDots = true;
 
             }
@@ -390,6 +498,63 @@ public class CodeHTMLConverter {
         if (separator.equals(".")) {
             localStringBuilder.deleteCharAt(localStringBuilder.length() - 1); // we do not want our line that is separated by . to end with a dot
         }
+        return localStringBuilder;
+    }
+
+
+    /**
+     * This method turns one line of XML code into its HTML analogue.
+     * <p>
+     * This method puts all XML tags into special HTML Tags defined in {@link HTMLTags#SPAN_XML_TAG} and {@link HTMLTags#SPAN_FINISH}
+     * <p>
+     * All other code is considered to be text.
+     *
+     * @param line               {@link String} that contains a line of XML code that needs to be translated.
+     * @param localStringBuilder {@link StringBuilder} that contains data associated with all spaces in the {@param line}.
+     * @return {@link StringBuilder} containing a single line of code converted to HTML.
+     * @throws Exception is thrown if {@param line} has any errors.
+     */
+    private static StringBuilder convertXMLLine(String line, StringBuilder localStringBuilder) throws Exception {
+
+        char[] chars = line.toCharArray();
+        int tagStart = -1;
+        int tagFinish = -1;
+        StringBuilder commonWordBuilder = new StringBuilder();
+        for (int i = 0; i < chars.length; i++) {
+            if (chars[i] == '<') {
+                tagStart = i;
+            } else if (tagStart != -1) {
+                if (chars[i] == '>') {
+                    tagFinish = i;
+                }
+            }
+            if (tagStart == -1) {
+                commonWordBuilder.append(chars[i]);
+            }
+
+            if (tagFinish != -1) {
+                // that means that we have found a full tag
+
+                localStringBuilder.append(commonWordBuilder.toString());
+                commonWordBuilder = new StringBuilder();
+
+                StringBuilder tagBuilder = new StringBuilder();
+                for (int j = tagStart; j < tagFinish; j++) {
+                    tagBuilder.append(chars[j]);
+                }
+                tagBuilder.append(">");
+
+                localStringBuilder.append(HTMLTags.getCodeInTag(getCodeFormattedFromSpecialSymbols(tagBuilder.toString()), Tags.SPAN_XML_TAG));
+
+                tagStart = -1;
+                tagFinish = -1;
+
+            }
+
+        }
+
+        localStringBuilder.append(commonWordBuilder.toString());
+
         return localStringBuilder;
     }
 

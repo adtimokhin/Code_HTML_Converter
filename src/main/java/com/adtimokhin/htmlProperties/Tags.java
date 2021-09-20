@@ -11,5 +11,5 @@ public enum Tags {
     SPAN_ANNOTATION,
     SPAN_KEY_WORD,
     SPAN_STRING,
-    P_FILE_NAME, P_TAG
+    P_FILE_NAME, P_TAG, SPAN_XML_TAG
 }

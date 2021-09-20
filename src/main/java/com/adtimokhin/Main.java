@@ -7,6 +7,6 @@ public class Main {
         // example how to use the program:
 
         CodeHTMLConverter converter = new CodeHTMLConverter();
-        System.out.println(converter.convert("code.txt"));
+        System.out.println(converter.convert("xmlcode.txt"));
     }
 }

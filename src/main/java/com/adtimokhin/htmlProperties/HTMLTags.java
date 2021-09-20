@@ -20,6 +20,7 @@ public class HTMLTags {
     private static final String SPAN_ANNOTATION_START = "<span class=\"annotation\">";
     private static final String SPAN_KEY_WORD_START = "<span class=\"key-word\">";
     private static final String SPAN_STRING_START = "<span class=\"string\">";
+    private static final String SPAN_XML_TAG = "<span class=\"xml-tag\">";
 
 
     private static final String P_FILE_NAME_START = "<p class=\"file-name\">";
@@ -73,6 +74,9 @@ public class HTMLTags {
 
             case P_TAG:
                 return putCodeInTags(code, P_START, P_FINISH);
+
+            case SPAN_XML_TAG:
+                return putCodeInTags(code, SPAN_XML_TAG, SPAN_FINISH);
 
             default:
                 throw new Exception("No such tag was found");
